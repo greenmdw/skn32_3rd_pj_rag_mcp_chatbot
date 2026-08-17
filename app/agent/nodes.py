@@ -142,7 +142,7 @@ async def document_retrieval(
         _merge_document_evidence(merged, first_result)
 
         policy = state.get("evidence_policy")
-        min_document_score = float(getattr(policy, "min_document_score", 0.38))
+        min_document_score = float(getattr(policy, "min_document_score", 0.58))
         direct_score = max((float(item.get("score", 0.0)) for item in merged.values()), default=0.0)
 
         if len(search_queries) > 1 and direct_score < min_document_score:
@@ -172,11 +172,14 @@ async def document_retrieval(
             index_version = evidence[0].get("metadata", {}).get("index_version")
             if index_version:
                 state["document_index_version"] = index_version
-    except MCPNoResultError:
+    except MCPNoResultError as exc:
         # "검색했지만 관련 문서가 0건"은 실패가 아니라 정상적인 빈 결과입니다.
         # _errors/_mcp_errors에 기록하지 않아, evidence_eval이 자연스럽게 INSUFFICIENT로
         # 판정하고(정책에 따라 1회 재조회) 응답도 500/502가 아닌 200으로 나가게 합니다.
+        # 다만 왜 없는지 이유는 버리지 않고 보존해서(_no_result_reasons), BOTH 질문에서
+        # 다른 쪽만 답변에 나올 때 "왜 이쪽은 안 나왔는지"를 최종 답변에 반영할 수 있게 합니다.
         state["document_evidence"] = []
+        state.setdefault("_no_result_reasons", {})["document"] = str(exc)
     except MCPClientError as exc:
         if state.get("route") != "BOTH":
             raise
@@ -212,8 +215,8 @@ async def database_retrieval(
     if domain in ("purchase", "both"):
         try:
             evidence.extend(await mcp_client.purchase_query(question, user_context=user_context))
-        except MCPNoResultError:
-            pass  # 조회 결과 0건은 실패가 아니라 정상적인 빈 결과입니다.
+        except MCPNoResultError as exc:
+            state.setdefault("_no_result_reasons", {})["purchase"] = str(exc)
         except MCPClientError as exc:
             if not allows_partial_result:
                 raise
@@ -222,8 +225,8 @@ async def database_retrieval(
     if domain in ("sales", "both"):
         try:
             evidence.extend(await mcp_client.sales_query(question, user_context=user_context))
-        except MCPNoResultError:
-            pass  # 조회 결과 0건은 실패가 아니라 정상적인 빈 결과입니다.
+        except MCPNoResultError as exc:
+            state.setdefault("_no_result_reasons", {})["sales"] = str(exc)
         except MCPClientError as exc:
             if not allows_partial_result:
                 raise
@@ -231,7 +234,19 @@ async def database_retrieval(
             retrieval_errors.append(exc)
 
     state["database_evidence"] = evidence
-    if evidence or state.get("document_evidence"):
+    if evidence:
+        return state
+    if state.get("route") == "BOTH":
+        # BOTH 경로에서는 document가 병렬로 도는 형제 브랜치라(app.agent.graph),
+        # 이 시점에 document_retrieval이 성공했는지 이 함수는 알 수 없다. 예전
+        # 순차 실행 때는 document가 먼저 끝나 있어 state.get("document_evidence")로
+        # 확인할 수 있었지만, 병렬에서는 그 값이 항상 "아직 없음"으로 보여 매번
+        # 여기서 잘못 raise하게 된다. 대신 진짜 예외를 _mcp_errors에 남겨두면,
+        # 두 브랜치가 다 끝난 뒤 evidence_eval이 양쪽 다 근거가 없는 걸 확인하고
+        # 이 예외를 다시 꺼내 raise한다(총체적 실패를 "근거 부족"으로 조용히
+        # 위장하지 않기 위함).
+        if retrieval_errors:
+            state.setdefault("_mcp_errors", []).extend(retrieval_errors)
         return state
 
     previous_errors = state.get("_mcp_errors", [])
@@ -284,7 +299,8 @@ async def answer_synthesis(
     question = state.get("question", "")
     answer = await complete(ANSWER_PROMPT, evidence, question, llm)
     if evidence_status == "PARTIALLY_SUPPORTED":
-        answer += "\n\n(일부 근거에 조회 오류가 있어, 확인된 부분만 반영한 답변입니다.)"
+        reason = state.get("evidence_reason") or "일부 근거에 조회 오류가 있어, 확인된 부분만 반영한 답변입니다."
+        answer += f"\n\n({reason})"
 
     state["answer"] = answer
     state["sources"] = _build_sources(evidence)

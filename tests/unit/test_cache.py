@@ -16,9 +16,17 @@ def test_cache_key_changes_by_conversation_context() -> None:
     assert make_cache_key(first) != make_cache_key(second)
 
 
+def test_cache_key_same_for_same_user_across_sessions() -> None:
+    """같은 사용자면 재로그인으로 session_id가 바뀌어도 캐시를 공유해야 한다."""
+    first = {"question": "A", "user_context": {"user_id": 1, "session_id": "one", "role": "hr", "allowed_databases": ["sales"]}}
+    second = {"question": "A", "user_context": {"user_id": 1, "session_id": "two", "role": "hr", "allowed_databases": ["sales"]}}
+    assert make_cache_key(first) == make_cache_key(second)
+
+
 def test_cache_key_changes_by_authenticated_user() -> None:
-    base = {"question": "A", "user_context": {"user_id": 1, "session_id": "one"}}
-    assert make_cache_key(base) != make_cache_key({"question": "A", "user_context": {"user_id": 2, "session_id": "two"}})
+    """다른 사용자면 role이 같아도 캐시를 공유하지 않아야 한다(프라이버시 경계)."""
+    base = {"question": "A", "user_context": {"user_id": 1, "session_id": "one", "role": "hr"}}
+    assert make_cache_key(base) != make_cache_key({"question": "A", "user_context": {"user_id": 2, "session_id": "two", "role": "hr"}})
 
 
 def test_cache_key_changes_by_all_version_suppliers() -> None:

@@ -55,8 +55,14 @@ GENERAL_ANCHORS = (
 )
 
 # 라우팅용 임계값은 FAISS 인용 근거 채택 기준(app/agent/state.py의
-# min_document_score=0.38)보다 느슨하게 잡는다. 여기서는 "근거로 인용해도
-# 되는가"가 아니라 "그나마 어느 카테고리에 가까운가"만 정하면 되기 때문이다.
+# min_document_score=0.58, sbert 전환 후 28문항 적대적 평가로 재산정됨)과는 별개의
+# 척도다. 여기서는 "근거로 인용해도 되는가"가 아니라 "그나마 어느 카테고리에
+# 가까운가"만 정하면 되기 때문이다.
+# 주의: 이 SIMILARITY_THRESHOLD=0.45도 예전 local(n-gram) 백엔드 점수대 기준으로
+# 잡힌 값이라, sbert 전환 후에는 이 값도 별도로 재보정이 필요할 가능성이 높다
+# (min_document_score처럼 로컬 점수대(0.1~0.4)와 sbert 점수대(0.4~0.95)는 완전히
+# 다르다 - scripts/calibrate_min_relevance.py 참고). 아직 이 값 전용 재보정 스크립트는
+# 없음 - 다음 세션 후보.
 SIMILARITY_THRESHOLD = 0.45
 
 _anchor_cache: dict[str, list[list[float]]] | None = None

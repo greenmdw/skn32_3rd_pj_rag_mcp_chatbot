@@ -22,11 +22,20 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
-INDEX_PATH = Path("../data/faiss/index.faiss")
+INDEX_PATH = PROJECT_ROOT / "data" / "faiss" / "index.faiss"
 TOP_K = 10
-MIN_SCORE = 0.38  # app/agent/state.py의 min_document_score와 반드시 일치시킬 것
+# 하드코딩 대신 실제 정책값을 그대로 참조한다. 예전에는 여기 숫자를 손으로 박아두고
+# "app/agent/state.py의 min_document_score와 반드시 일치시킬 것"이라는 주석만 믿고
+# 있었는데, EMBEDDING_BACKEND를 sbert로 바꾸고 min_document_score를 0.38 -> 0.72로
+# 재조정하는 과정에서 실제로 이 스크립트만 갱신을 놓칠 뻔했다. 이제는 두 값이
+# 구조적으로 어긋날 수 없다.
+from app.agent.state import EvidencePolicy  # noqa: E402
+
+MIN_SCORE = EvidencePolicy().min_document_score
 
 
 # ---------------------------------------------------------------------------
@@ -108,9 +117,35 @@ def layer1_routing(verbose: bool) -> tuple[int, int]:
     return passed, len(CASES)
 
 
+def _hybrid_search(store, question: str, top_k: int) -> list[dict]:
+    """rag.py::retrieve()와 동일한 벡터+어휘 병합 로직을 재현한다.
+
+    이전 버전은 store.search()(순수 벡터)만 호출해서, 실제 운영 경로가 쓰는
+    store.search_text() 어휘 보완을 전혀 검증하지 못했다 - 어휘 계층을 아무리
+    고쳐도 이 평가에는 반영되지 않는 사각지대였다. document_id 필터(문서 DB가
+    질문과 관련 있다고 판단한 후보로 좁히는 단계)는 여기서는 의도적으로 생략한다
+    (adversarial_eval은 MySQL 없이 검색 품질만 격리해서 보는 게 목적이라 스크립트
+    상단 안내와 동일한 전제).
+    """
+    from ingestion.embedding import embed
+
+    vector = embed([question])[0]
+    vector_candidates = store.search(vector, top_k * 5)
+    lexical_candidates = store.search_text(question, top_k * 5)
+    for c in vector_candidates:
+        c["_source"] = "vector"
+    for c in lexical_candidates:
+        c["_source"] = "lexical"
+    merged: dict[str, dict] = {}
+    for candidate in vector_candidates + lexical_candidates:
+        current = merged.get(candidate["chunk_id"])
+        if current is None or candidate["score"] > current["score"]:
+            merged[candidate["chunk_id"]] = candidate
+    return sorted(merged.values(), key=lambda c: c["score"], reverse=True)[:top_k]
+
+
 def layer2_retrieval(verbose: bool) -> tuple[int, int]:
     """기대 문서가 상위에 오는지(recall), 범위 밖 질문이 걸러지는지(거부) 확인한다."""
-    from ingestion.embedding import embed
     from mcp_servers.document_tools.faiss_store import FaissStore
 
     if not INDEX_PATH.exists():
@@ -119,15 +154,14 @@ def layer2_retrieval(verbose: bool) -> tuple[int, int]:
 
     store = FaissStore(INDEX_PATH)
     meta = store.load()
-    print(f"\n[2] 검색 계층 (chunk={meta['chunk_count']}, top_k={TOP_K}, 임계값={MIN_SCORE})")
+    print(f"\n[2] 검색 계층 (chunk={meta['chunk_count']}, top_k={TOP_K}, 임계값={MIN_SCORE}, 벡터+어휘 하이브리드)")
 
     hit, total, fails = 0, 0, []
     related_scores: list[float] = []   # 관련 질문이 기대 문서에서 받은 최고점
     unrelated_scores: list[float] = []  # 범위 밖 질문이 받은 최고점
 
     for question, _, expected_doc, kind in CASES:
-        vector = embed([question])[0]
-        results = store.search(vector, TOP_K)
+        results = _hybrid_search(store, question, TOP_K)
         # search()는 title을 최상위 키로 돌려준다 (metadata 안이 아니다).
         kept = [r for r in results if r.get("score", 0.0) >= MIN_SCORE]
         best = max((r.get("score", 0.0) for r in results), default=0.0)
@@ -136,7 +170,8 @@ def layer2_retrieval(verbose: bool) -> tuple[int, int]:
         if expected_doc is None:
             ok = len(kept) == 0
             unrelated_scores.append(best)
-            detail = f"최고점 {best:.3f}, 임계값 통과 {len(kept)}건"
+            best_source = next((r["_source"] for r in results if r.get("score", 0.0) == best), "?")
+            detail = f"최고점 {best:.3f}[{best_source}], 임계값 통과 {len(kept)}건"
         else:
             ranked = [
                 (rank, r) for rank, r in enumerate(results, 1)
@@ -145,10 +180,11 @@ def layer2_retrieval(verbose: bool) -> tuple[int, int]:
             ok = bool(ranked) and ranked[0][1].get("score", 0.0) >= MIN_SCORE
             if ranked:
                 related_scores.append(ranked[0][1].get("score", 0.0))
-                detail = f"기대문서 {ranked[0][0]}위 {ranked[0][1]['score']:.3f}"
+                detail = f"기대문서 {ranked[0][0]}위 {ranked[0][1]['score']:.3f}[{ranked[0][1]['_source']}]"
             else:
                 top = results[0].get("title", "(없음)") if results else "(없음)"
-                detail = f"top_k 밖 / 1위='{top[:18]}' {best:.3f}"
+                top_source = results[0].get("_source", "?") if results else "?"
+                detail = f"top_k 밖 / 1위='{top[:18]}' {best:.3f}[{top_source}]"
 
         if ok:
             hit += 1

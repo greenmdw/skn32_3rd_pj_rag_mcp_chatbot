@@ -46,6 +46,17 @@ async def evidence_eval(
     )
     has_tool_error = bool(state.get("_errors")) or any(item.get("error") for item in database_evidence)
 
+    # BOTH 경로에서 한쪽이 에러 없이 그냥 0건으로 끝나는 경우("이번 연도 매출"처럼 데이터
+    # 보유 기간 밖이라 정상적으로 빈 결과가 나온 경우)는 has_tool_error에도 안 잡히고
+    # has_rejected_non_document_evidence에도 안 잡힌다(둘 다 "있는데 걸러진" 경우만
+    # 봄). 그러면 SUPPORTED로 처리돼 다른 쪽 근거만으로 조용히 답변이 나가고, 사용자는
+    # 요청한 항목 중 하나가 아예 빠졌다는 걸 알 방법이 없다.
+    is_both_route = state.get("route") == "BOTH"
+    has_missing_side = is_both_route and (
+        (bool(document_evidence) and not database_evidence)
+        or (bool(database_evidence) and not document_evidence)
+    )
+
     has_contradiction = _has_explicit_contradiction(all_evidence) or _has_conflicting_fact_values(all_evidence)
     state["evidence"] = [] if has_contradiction else accepted_evidence
 
@@ -53,11 +64,36 @@ async def evidence_eval(
         state["evidence_status"] = "CONTRADICTED"
         state["evidence_reason"] = "채택 가능한 근거 사이에 명시적인 사실 충돌이 있습니다."
     elif not accepted_evidence:
+        mcp_errors = state.get("_mcp_errors") or []
+        if mcp_errors and not (document_evidence or database_evidence):
+            # 근거가 문서·DB 어느 쪽에도 전혀 없는데 진짜 조회 오류까지 있으면,
+            # "근거가 부족합니다" 같은 조용한 답변으로 총체적 실패를 위장하지 않는다.
+            # BOTH 경로는 database_retrieval이 병렬 형제 브랜치 때문에 여기서 직접
+            # raise를 못 하고 예외를 _mcp_errors에 남겨두므로(app.agent.nodes),
+            # 두 브랜치가 다 합류한 이 시점에 대신 다시 꺼내 raise한다.
+            raise mcp_errors[0]
         state["evidence_status"] = "INSUFFICIENT"
         state["evidence_reason"] = "정책 기준을 충족하는 근거가 없습니다."
-    elif has_tool_error or has_rejected_non_document_evidence:
+    elif has_tool_error or has_rejected_non_document_evidence or has_missing_side:
         state["evidence_status"] = "PARTIALLY_SUPPORTED"
-        state["evidence_reason"] = "일부 조회가 실패했거나 일부 근거가 품질 기준에서 제외됐습니다."
+        if has_tool_error or has_rejected_non_document_evidence:
+            state["evidence_reason"] = "일부 조회가 실패했거나 일부 근거가 품질 기준에서 제외됐습니다."
+        else:
+            no_result_reasons = state.get("_no_result_reasons") or {}
+            if document_evidence and not database_evidence:
+                # database_retrieval이 purchase/sales 중 하나만 조회했을 수도 있으므로,
+                # 실제로 기록된 이유 중 하나를 그대로 쓴다(없으면 일반 문구로 대체).
+                specific_reason = next(iter(no_result_reasons.values()), None)
+            elif database_evidence and not document_evidence:
+                specific_reason = no_result_reasons.get("document")
+            else:
+                specific_reason = None
+
+            missing_kind = "데이터 조회 결과" if document_evidence else "문서 근거"
+            if specific_reason:
+                state["evidence_reason"] = f"질문 중 일부는 답변했지만, {missing_kind}가 없어 그 부분은 답변에서 빠졌습니다. ({specific_reason})"
+            else:
+                state["evidence_reason"] = f"질문 중 일부는 답변했지만, {missing_kind}가 없어 그 부분은 답변에서 빠졌습니다."
     else:
         state["evidence_status"] = "SUPPORTED"
         state["evidence_reason"] = "수집된 근거가 현재 품질 정책을 충족합니다."

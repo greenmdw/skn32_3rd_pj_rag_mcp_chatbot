@@ -24,7 +24,11 @@ class EvidencePolicy:
     """근거 품질 평가에 주입하는 결정적 정책값이다."""
 
     min_relevance: float = 0.38          # DB 근거 기준
-    min_document_score: float = 0.38     # 문서 근거 기준 (새로 추가)
+    min_document_score: float = 0.58     # 문서 근거 기준 (2026-08-06 재산정: calibrate_min_relevance.py의
+                                          # 5+3문항 표본이 아니라, adversarial_eval.py 28문항 전수로 다시 계산.
+                                          # 관련 최저 0.437 / 무관 최고 0.561 - 완전 분리는 불가하지만
+                                          # (극단적 "거짓전제" 케이스 2건은 threshold로 못 잡음), 대조군을 포함한
+                                          # 대다수 정상 질문을 살리면서 무관 질문은 걸러내는 값)
     min_confidence: float = 0.5
     required_metadata_keys: tuple[str, ...] = ()
     max_freshness_seconds: float | None = None
@@ -52,6 +56,7 @@ class GraphState(TypedDict, total=False):
     database_evidence: list[dict[str, Any]]
     evidence_policy: EvidencePolicy
     _errors: list[str]
+    _no_result_reasons: dict[str, str]
     _mcp_errors: list[Exception]
     evidence: list[dict[str, Any]]
     evidence_status: EvidenceStatus

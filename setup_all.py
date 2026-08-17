@@ -109,25 +109,25 @@ PURCHASE_READ_PASSWORD=purchase_read_1234
 
     # 2. 로그인 계정용 DB 및 구조 생성 (이미 존재할 수 있으므로 중복 무시 옵션 적용 가능)
     print_step("2. 로그인 계정 DB 구조 생성 (Account)")
-    run_mysql_file("root", root_password, "", "../database/account/001_create_account_db.sql", ignore_duplicate_error=True)
-    run_mysql_file("root", root_password, "account_db", "../database/account/002_create_accounts_table.sql",
+    run_mysql_file("root", root_password, "", "database/account/001_create_account_db.sql", ignore_duplicate_error=True)
+    run_mysql_file("root", root_password, "account_db", "database/account/002_create_accounts_table.sql",
                    ignore_duplicate_error=True)
-    run_mysql_file("root", root_password, "account_db", "../database/account/003_create_account_views.sql",
+    run_mysql_file("root", root_password, "account_db", "database/account/003_create_account_views.sql",
                    ignore_duplicate_error=True)
 
     # 3. 사내규정 챗봇 DB 및 RAG 파이프라인 실행
     print_step("3. 사내규정 챗봇(RAG) DB 및 문서 인덱싱")
-    run_mysql_file("root", root_password, "", "../database/document/schema.sql", ignore_duplicate_error=True)
+    run_mysql_file("root", root_password, "", "database/document/schema.sql", ignore_duplicate_error=True)
 
-    if Path("register_documents.py").exists():
+    if Path("scripts/register_documents.py").exists():
         run_cmd(f"{sys.executable} scripts/register_documents.py")
-    if Path("ingest_documents.py").exists():
+    if Path("scripts/ingest_documents.py").exists():
         run_cmd(f"{sys.executable} scripts/ingest_documents.py")
 
     # 4. 판매(Sales) 도메인 세팅 및 ETL 실행
     print_step("4. 판매(Sales) 도메인 세팅 및 ETL 실행")
-    run_mysql_file("root", root_password, "", "../database/sales/create_sales_db.sql", ignore_duplicate_error=True)
-    run_mysql_file("JangGGo", "", "sales", "../database/sales/ddl.sql", ignore_duplicate_error=True)
+    run_mysql_file("root", root_password, "", "database/sales/create_sales_db.sql", ignore_duplicate_error=True)
+    run_mysql_file("JangGGo", "", "sales", "database/sales/ddl.sql", ignore_duplicate_error=True)
 
     excel_path = "../data/raw/source_data/ERP_Sales_Data_Full_5y.xlsx"
     if Path(excel_path).exists():
@@ -135,14 +135,14 @@ PURCHASE_READ_PASSWORD=purchase_read_1234
     else:
         print(f"[건너뜀] 엑셀 파일이 없습니다: {excel_path}")
 
-    run_mysql_file("JangGGo", "", "sales", "../database/sales/views.sql", ignore_duplicate_error=True)
-    run_mysql_file("root", root_password, "sales", "../database/sales/grants_reader.sql", ignore_duplicate_error=True)
+    run_mysql_file("JangGGo", "", "sales", "database/sales/views.sql", ignore_duplicate_error=True)
+    run_mysql_file("root", root_password, "sales", "database/sales/grants_reader.sql", ignore_duplicate_error=True)
 
     # 5. 구매(Purchase) 도메인 세팅 및 ETL 실행
     print_step("5. 구매(Purchase) 도메인 세팅 및 ETL 실행")
-    run_mysql_file("root", root_password, "", "../database/purchase/create_purchase_db.sql", ignore_duplicate_error=True)
+    run_mysql_file("root", root_password, "", "database/purchase/create_purchase_db.sql", ignore_duplicate_error=True)
 
-    purchase_etl_path = "../etl/purchase/main.py"
+    purchase_etl_path = "etl/purchase/main.py"
     if Path(purchase_etl_path).exists():
         # 스크립트 경로로 직접 실행하면 프로젝트 루트가 sys.path에 잡히지 않아
         # main.py의 `from etl.purchase...` 절대 임포트가 'No module named etl'로
@@ -151,8 +151,8 @@ PURCHASE_READ_PASSWORD=purchase_read_1234
     else:
         print(f"[건너뜀] 구매 ETL 파일이 없습니다: {purchase_etl_path}")
 
-    run_mysql_file("JangGGo", "1234", "purchase", "../database/purchase/views.sql", ignore_duplicate_error=True)
-    run_mysql_file("JangGGo", "1234", "purchase", "../database/purchase/grants_reader.sql", ignore_duplicate_error=True)
+    run_mysql_file("JangGGo", "1234", "purchase", "database/purchase/views.sql", ignore_duplicate_error=True)
+    run_mysql_file("JangGGo", "1234", "purchase", "database/purchase/grants_reader.sql", ignore_duplicate_error=True)
 
     print("\n✨ 모든 사전작업 및 초기화 코드가 성공적으로 실행되었습니다!")
 

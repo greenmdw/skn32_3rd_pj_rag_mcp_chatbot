@@ -77,7 +77,10 @@ async def query_sales(question: str) -> list[dict[str, Any]]:
             message="질문 형식이 올바르지 않습니다. 판매 데이터 범위에서 다시 질문해 주세요.",
         )
 
-    schema = get_schema_resource()
+    # get_schema_resource()는 최초 1회 내부에서 동기 DB 조회(_load_data_coverage)를
+    # 한다. to_thread 없이 직접 호출하면 그 몇 초 동안 이벤트 루프가 멈춰서, BOTH
+    # 질문에서 병렬로 같이 돌아야 할 document_retrieval까지 시작을 못 하게 된다.
+    schema = await asyncio.to_thread(get_schema_resource)
 
     sql = await generate_sql(question, schema)
     if not sql:

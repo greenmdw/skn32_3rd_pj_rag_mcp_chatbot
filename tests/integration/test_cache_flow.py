@@ -29,7 +29,7 @@ def test_both_success_is_cached_without_additional_port_or_llm_calls() -> None:
     assert first.status_code == 200
     assert first.json()["route"] == "BOTH"
     assert {source["source_type"] for source in first.json()["sources"]} == {"document", "database"}
-    assert [call.tool_name for call in calls_after_miss] == ["search_documents", "query_sales"]
+    assert sorted(call.tool_name for call in calls_after_miss) == sorted(["search_documents", "query_sales"])
     assert second.status_code == 200
     assert second.json()["cached"] is True
     assert port.calls == calls_after_miss
@@ -57,7 +57,7 @@ def test_both_keeps_document_result_when_database_tool_fails() -> None:
     assert body["cached"] is False
     assert [source["source_type"] for source in body["sources"]] == ["document"]
     assert "일부 근거" in body["answer"]
-    assert [call.tool_name for call in port.calls] == ["search_documents", "query_sales"]
+    assert sorted(call.tool_name for call in port.calls) == sorted(["search_documents", "query_sales"])
     assert len(llm.calls) == 1
 
 
@@ -79,5 +79,5 @@ def test_both_returns_insufficient_response_when_all_tools_fail() -> None:
     body = response.json()
     assert response.status_code == 502
     assert body["error_code"] == "QUERY_ERROR"
-    assert [call.tool_name for call in port.calls] == ["search_documents", "query_sales"]
+    assert sorted(call.tool_name for call in port.calls) == sorted(["search_documents", "query_sales"])
     assert llm.calls == []

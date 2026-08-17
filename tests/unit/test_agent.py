@@ -146,7 +146,7 @@ async def test_evidence_eval_uses_calibrated_document_score_threshold() -> None:
     state: GraphState = {
         "route": "DOCUMENT",
         "document_evidence": [
-            {"type": "document", "content": "휴가 규정", "score": 0.5},
+            {"type": "document", "content": "휴가 규정", "score": 0.8},
             {"type": "document", "content": "낮은 점수", "score": 0.2},
         ],
         "database_evidence": [],
@@ -360,7 +360,10 @@ async def test_graph_both_fans_in_document_and_partial_database_evidence(
 
     result = await build_graph(MCPClient(port)).ainvoke({"question": "휴가 규정과 구매 및 판매 현황"})
 
-    assert [call.tool_name for call in port.calls] == ["search_documents", "query_purchase", "query_sales"]
+    # document/database는 이제 병렬로 실행되므로 호출 순서가 보장되지 않는다.
+    assert sorted(call.tool_name for call in port.calls) == sorted(
+        ["search_documents", "query_purchase", "query_sales"]
+    )
     assert len(result["document_evidence"]) == 1
     assert [item["domain"] for item in result["database_evidence"]] == ["sales"]
     assert result["evidence_status"] == "PARTIALLY_SUPPORTED"

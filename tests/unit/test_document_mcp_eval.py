@@ -66,3 +66,19 @@ def test_lexical_search_recovers_exact_policy_term(fixture_index) -> None:
     assert results
     assert results[0]["title"] == "sample_card_policy"
     assert results[0]["score"] >= 0.38
+
+
+def test_lexical_search_does_not_false_positive_on_generic_term(fixture_index) -> None:
+    """"제1조(목적)"처럼 문서마다 반복되는 상투어 하나만 겹쳐서는 근거로 인정하지 않는다.
+
+    수정 전 구현은 흔한 말 하나만 일치해도 고정 0.55점을 줘서 범위 밖 질문이
+    임계값(0.38)을 쉽게 넘었다(adversarial_eval.py Layer 2에서 발견,
+    handoff_summary.md 참고). "목적"은 fixture 문서 둘 다에 등장하는 상투어라,
+    실제로 관련 없는 질문이어도 예전 구현이면 통과했을 사례다.
+    """
+    results = fixture_index.search_text("목적이 뭐야", top_k=3)
+
+    for result in results:
+        assert result["score"] < 0.38, (
+            f"'{result['title']}'가 상투어 하나만으로 임계값을 넘김: {result['score']:.3f}"
+        )

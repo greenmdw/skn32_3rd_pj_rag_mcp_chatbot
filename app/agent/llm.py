@@ -151,9 +151,12 @@ def _is_sensitive_key(key: object) -> bool:
 def _stringify_evidence(item: dict[str, Any]) -> str:
     if item.get("type") == "database":
         rows_preview = item.get("rows", [])[:5]
-        return f"SQL: {item.get('generated_sql', '')}\n결과({item.get('row_count', 0)}건 중 일부): {rows_preview}"
+        text = f"SQL: {item.get('generated_sql', '')}\n결과({item.get('row_count', 0)}건 중 일부): {rows_preview}"
+        message = item.get("message")
+        if message:
+            text += f"\n안내: {message}"
+        return text
     return str(item.get("content", item))
-
 
 def _format_context_as_demo_answer(context: list[dict[str, Any]], question: str) -> str:
     if not context:
