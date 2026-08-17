@@ -4,7 +4,7 @@
     <content url="file://$MODULE_DIR$">
       <excludeFolder url="file://$MODULE_DIR$/.venv" />
     </content>
-    <orderEntry type="jdk" jdkName="C:\project_workspace\skn32_3rd_pj_rag_mcp_chatbot\.venv" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="C:\llm_workspace\20260730_3rd_pj_rag_mcp_chatbot\.venv" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>
