@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 920" width="1000" height="920" font-family="Pretendard, Malgun Gothic, Apple SD Gothic Neo, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+    </marker>
+    <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/>
+    </marker>
+    <marker id="arrowAmber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#f59e0b"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1000" height="920" rx="10" fill="#ffffff"/>
+
+  <text x="500" y="40" text-anchor="middle" font-size="22" font-weight="700" fill="#172033">시스템 아키텍처</text>
+  <text x="500" y="64" text-anchor="middle" font-size="12.5" fill="#64748b">질문 1건의 처리 흐름 · BOTH 질문은 문서 검색과 데이터 조회를 병렬 실행</text>
+
+  <rect x="25" y="428" width="690" height="92" rx="10" fill="#eff6ff" stroke="#93c5fd" stroke-dasharray="5 4"/>
+  <text x="39" y="446" font-size="11.5" font-weight="700" fill="#1d4ed8">병렬 실행 (BOTH)</text>
+
+  <rect x="25" y="532" width="690" height="92" rx="10" fill="#f5f3ff" stroke="#c4b5fd"/>
+  <text x="39" y="550" font-size="11.5" font-weight="700" fill="#6d28d9">MCP Tool 경계</text>
+
+  <rect x="25" y="636" width="690" height="100" rx="10" fill="#f0fdf4" stroke="#86efac"/>
+  <text x="39" y="654" font-size="11.5" font-weight="700" fill="#15803d">데이터 계층</text>
+
+  <rect x="150" y="90" width="440" height="50" rx="9" fill="#172033" stroke="#172033"/>
+  <text x="370" y="112" text-anchor="middle" font-size="14.5" font-weight="700" fill="#ffffff">사용자 · 웹 브라우저</text>
+  <text x="370" y="130" text-anchor="middle" font-size="11" fill="#cbd5e1">채팅 UI · 표 · 차트(Chart.js)</text>
+
+  <rect x="150" y="175" width="440" height="55" rx="9" fill="#ffffff" stroke="#2563eb" stroke-width="1.6"/>
+  <text x="370" y="198" text-anchor="middle" font-size="14" font-weight="700" fill="#1e40af">FastAPI · POST /api/chat</text>
+  <text x="370" y="217" text-anchor="middle" font-size="11" fill="#64748b">로그인 세션 확인 · 역할(RBAC) 권한 검사</text>
+
+  <rect x="150" y="265" width="440" height="55" rx="9" fill="#fffbeb" stroke="#f59e0b"/>
+  <text x="370" y="288" text-anchor="middle" font-size="14" font-weight="700" fill="#92400e">Answer Cache 조회</text>
+  <text x="370" y="307" text-anchor="middle" font-size="11" fill="#a16207">질문 + 문서 인덱스 버전 + DB 최신도 + 역할 → SHA-256 키</text>
+
+  <rect x="730" y="265" width="250" height="55" rx="9" fill="#fef3c7" stroke="#f59e0b"/>
+  <text x="855" y="288" text-anchor="middle" font-size="13.5" font-weight="700" fill="#92400e">캐시 적중</text>
+  <text x="855" y="306" text-anchor="middle" font-size="10.5" fill="#a16207">LLM·MCP·DB 호출 없이 즉시 반환</text>
+
+  <rect x="150" y="355" width="440" height="55" rx="9" fill="#ffffff" stroke="#2563eb" stroke-width="1.6"/>
+  <text x="370" y="378" text-anchor="middle" font-size="14" font-weight="700" fill="#1e40af">Query Router</text>
+  <text x="370" y="397" text-anchor="middle" font-size="11" fill="#64748b">키워드 규칙 + LLM 의미 분류 → GENERAL / DOCUMENT / DATABASE / BOTH</text>
+
+  <rect x="45" y="455" width="310" height="55" rx="9" fill="#ffffff" stroke="#3b82f6"/>
+  <text x="200" y="478" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1e40af">Document Retrieval</text>
+  <text x="200" y="496" text-anchor="middle" font-size="10.5" fill="#64748b">document_evidence 에만 기록</text>
+
+  <rect x="385" y="455" width="310" height="55" rx="9" fill="#ffffff" stroke="#3b82f6"/>
+  <text x="540" y="478" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1e40af">Data Retrieval</text>
+  <text x="540" y="496" text-anchor="middle" font-size="10.5" fill="#64748b">database_evidence 에만 기록</text>
+
+  <rect x="45" y="559" width="310" height="55" rx="9" fill="#ffffff" stroke="#8b5cf6"/>
+  <text x="200" y="582" text-anchor="middle" font-size="13.5" font-weight="700" fill="#6d28d9">Document MCP</text>
+  <text x="200" y="600" text-anchor="middle" font-size="10.5" fill="#64748b">문서 경로 조회 → 파일 로드 → 검색</text>
+
+  <rect x="385" y="559" width="310" height="55" rx="9" fill="#ffffff" stroke="#8b5cf6"/>
+  <text x="540" y="582" text-anchor="middle" font-size="13.5" font-weight="700" fill="#6d28d9">Data MCP</text>
+  <text x="540" y="600" text-anchor="middle" font-size="10.5" fill="#64748b">query_sales · query_purchase</text>
+
+  <rect x="45" y="663" width="310" height="65" rx="9" fill="#ffffff" stroke="#22c55e"/>
+  <text x="200" y="686" text-anchor="middle" font-size="13.5" font-weight="700" fill="#15803d">FAISS 인덱스 · 원문 PDF</text>
+  <text x="200" y="704" text-anchor="middle" font-size="10.5" fill="#64748b">768차원 · 381 청크</text>
+  <text x="200" y="719" text-anchor="middle" font-size="10.5" fill="#64748b">벡터 + 어휘(IDF) 하이브리드 검색</text>
+
+  <rect x="385" y="663" width="310" height="65" rx="9" fill="#ffffff" stroke="#22c55e"/>
+  <text x="540" y="686" text-anchor="middle" font-size="13.5" font-weight="700" fill="#15803d">Text2SQL → MySQL</text>
+  <text x="540" y="704" text-anchor="middle" font-size="10.5" fill="#64748b">4겹 안전장치 · 조회 전용 계정</text>
+  <text x="540" y="719" text-anchor="middle" font-size="10.5" fill="#64748b">sales · purchase (조회 뷰 5개씩)</text>
+
+  <rect x="150" y="756" width="440" height="55" rx="9" fill="#ffffff" stroke="#2563eb" stroke-width="1.6"/>
+  <text x="370" y="779" text-anchor="middle" font-size="14" font-weight="700" fill="#1e40af">Evidence Eval</text>
+  <text x="370" y="798" text-anchor="middle" font-size="11" fill="#64748b">관련성 · 충분성 · 충돌 검사 → 근거 부족 시 1회 보강 조회</text>
+
+  <rect x="150" y="831" width="440" height="55" rx="9" fill="#eff6ff" stroke="#2563eb" stroke-width="1.6"/>
+  <text x="370" y="854" text-anchor="middle" font-size="14" font-weight="700" fill="#1e40af">Answer Synthesis</text>
+  <text x="370" y="873" text-anchor="middle" font-size="11" fill="#64748b">채택된 근거만 LLM에 전달 (환각 차단)</text>
+
+  <rect x="730" y="831" width="250" height="55" rx="9" fill="#172033" stroke="#172033"/>
+  <text x="855" y="854" text-anchor="middle" font-size="13.5" font-weight="700" fill="#ffffff">답변 · 출처 · 표 · 차트</text>
+  <text x="855" y="872" text-anchor="middle" font-size="10.5" fill="#cbd5e1">생성 SQL · 근거 상태 포함</text>
+
+  <path d="M 370 140 L 370 172" stroke="#64748b" stroke-width="1.6" fill="none" marker-end="url(#arrow)"/>
+  <path d="M 370 230 L 370 262" stroke="#64748b" stroke-width="1.6" fill="none" marker-end="url(#arrow)"/>
+  <path d="M 370 320 L 370 352" stroke="#64748b" stroke-width="1.6" fill="none" marker-end="url(#arrow)"/>
+  <text x="381" y="341" font-size="11" font-weight="700" fill="#a16207">Miss</text>
+
+  <path d="M 590 292 L 726 292" stroke="#f59e0b" stroke-width="1.8" fill="none" marker-end="url(#arrowAmber)"/>
+  <text x="642" y="284" font-size="11" font-weight="700" fill="#92400e">Hit</text>
+
+  <path d="M 370 410 L 370 420 L 200 420 L 200 452" stroke="#2563eb" stroke-width="1.8" fill="none" marker-end="url(#arrowBlue)"/>
+  <path d="M 370 410 L 370 420 L 540 420 L 540 452" stroke="#2563eb" stroke-width="1.8" fill="none" marker-end="url(#arrowBlue)"/>
+
+  <path d="M 200 510 L 200 556" stroke="#64748b" stroke-width="1.6" fill="none" marker-end="url(#arrow)"/>
+  <path d="M 540 510 L 540 556" stroke="#64748b" stroke-width="1.6" fill="none" marker-end="url(#arrow)"/>
+
+  <path d="M 200 614 L 200 660" stroke="#64748b" stroke-width="1.6" fill="none" marker-end="url(#arrow)"/>
+  <path d="M 540 614 L 540 660" stroke="#64748b" stroke-width="1.6" fill="none" marker-end="url(#arrow)"/>
+
+  <path d="M 200 728 L 200 744 L 370 744 L 370 753" stroke="#2563eb" stroke-width="1.8" fill="none" marker-end="url(#arrowBlue)"/>
+  <path d="M 540 728 L 540 744 L 370 744 L 370 753" stroke="#2563eb" stroke-width="1.8" fill="none" marker-end="url(#arrowBlue)"/>
+
+  <path d="M 370 811 L 370 828" stroke="#64748b" stroke-width="1.6" fill="none" marker-end="url(#arrow)"/>
+  <path d="M 590 858 L 726 858" stroke="#64748b" stroke-width="1.6" fill="none" marker-end="url(#arrow)"/>
+
+  <path d="M 855 320 L 855 828" stroke="#f59e0b" stroke-width="1.6" fill="none" stroke-dasharray="6 5" marker-end="url(#arrowAmber)"/>
+</svg>
